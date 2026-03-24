@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from jinja2 import Environment, FileSystemLoader
+
 from pydantic import BaseModel, Field
 
 # Initialize API
@@ -25,10 +25,7 @@ scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
 templates_dir=os.path.join(BASE_DIR,"templates")
 templates = Jinja2Templates(directory=templates_dir)
 
-templates.env= Environment(
-    loader=FileSystemLoader(templates_dir),
-    cache_size=0
-)
+
 
 # Input schema
 class HousingInput(BaseModel):
