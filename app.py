@@ -14,14 +14,16 @@ app = FastAPI(
     version="1.0"
 )
 
-# Load scaler
-scaler = joblib.load("scaler.pkl")
-
-# Load templates (UI)
+# Base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load scaler
+scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
+
+# Load templates
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
-# Input schema (for API)
+# Input schema
 class HousingInput(BaseModel):
     MedInc: float = Field(..., example=8.3)
     HouseAge: float = Field(..., example=41)
@@ -32,7 +34,7 @@ class HousingInput(BaseModel):
     Latitude: float = Field(..., example=37.88)
     Longitude: float = Field(..., example=-122.23)
 
-# Define model (MUST match training)
+# Define model
 model = nn.Sequential(
     nn.Linear(8, 64),
     nn.ReLU(),
@@ -42,7 +44,7 @@ model = nn.Sequential(
 )
 
 # Load trained weights
-model.load_state_dict(torch.load("model.pth", map_location=torch.device("cpu")))
+model.load_state_dict(torch.load(os.path.join(BASE_DIR, "model.pth"), map_location=torch.device("cpu")))
 model.eval()
 
 # ---------------------------
@@ -57,37 +59,26 @@ def home(request: Request):
 # ---------------------------
 @app.post("/predict")
 def predict(data: HousingInput):
+    try:
+        features = [
+            data.MedInc,
+            data.HouseAge,
+            data.AveRooms,
+            data.AveBedrms,
+            data.Population,
+            data.AveOccup,
+            data.Latitude,
+            data.Longitude
+        ]
+        scaled = scaler.transform([features])
+        x = torch.tensor(scaled, dtype=torch.float32)
 
-    # Convert structured input → list
-    features = [
-        data.MedInc,
-        data.HouseAge,
-        data.AveRooms,
-        data.AveBedrms,
-        data.Population,
-        data.AveOccup,
-        data.Latitude,
-        data.Longitude
-    ]
+        with torch.no_grad():
+            prediction = model(x).item()
 
-    # Scale input (CRITICAL)
-    scaled = scaler.transform([features])
-
-    # Convert to tensor
-    x = torch.tensor(scaled, dtype=torch.float32)
-
-    # Predict
-    with torch.no_grad():
-        prediction = model(x).item()
-
-    return {
-        "predicted_house_value": round(prediction, 2),
-        "estimated_price_usd": int(prediction * 100000)
-    }
-
-
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request
-    })
+        return {
+            "predicted_house_value": round(prediction, 2),
+            "estimated_price_usd": int(prediction * 100000)
+        }
+    except Exception as e:
+        return {"error": str(e)}
