@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import joblib
-
+import os
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -18,7 +18,8 @@ app = FastAPI(
 scaler = joblib.load("scaler.pkl")
 
 # Load templates (UI)
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Input schema (for API)
 class HousingInput(BaseModel):
@@ -83,3 +84,10 @@ def predict(data: HousingInput):
         "predicted_house_value": round(prediction, 2),
         "estimated_price_usd": int(prediction * 100000)
     }
+
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return templates.TemplateResponse("index.html", {
+        "request": request
+    })
