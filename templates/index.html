@@ -56,7 +56,7 @@
 
     <div id="result"></div>
 </div>
-
+{% raw %}
 <script>
 async function predict() {
     const data = {
@@ -84,6 +84,6 @@ async function predict() {
         "Predicted Price: $" + (result.predicted_house_value * 100000).toFixed(0);
 }
 </script>
-
+{% endraw %}
 </body>
 </html>
